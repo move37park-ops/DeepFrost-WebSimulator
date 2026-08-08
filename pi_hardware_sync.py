@@ -1,31 +1,59 @@
 import time
+import threading
 from flask import Flask, jsonify
 try:
-    from gpiozero import OutputDevice
-    # 기본 팬(또는 릴레이/트랜지스터) 연결 핀: GPIO 18 (BCM 기준)
-    # 핀 번호가 다르다면 이 부분을 수정하세요!
+    from gpiozero import OutputDevice, LED
+    # 팬(또는 릴레이) 연결 핀: GPIO 18, 동작 표시(추론) LED: GPIO 23
     fan = OutputDevice(18)
+    # 추론 깜빡임용 LED가 있다면 사용
+    try:
+        infer_led = LED(23)
+    except:
+        infer_led = None
     hardware_available = True
 except Exception as e:
     print(f"[경고] GPIO 모듈 로드 실패 (라즈베리파이 환경이 아니거나 권한 부족): {e}")
     fan = None
+    infer_led = None
     hardware_available = False
 
 app = Flask(__name__)
+last_tick_time = 0
+is_inferring = False
 
-@app.route('/fan/on', methods=['GET'])
-def fan_on():
-    if hardware_available and fan:
-        fan.on()
-    print("\n[PI 하드웨어] 🌀 엣지 노트북으로부터 명령 수신: 팬 작동 시작! (제상 가동)")
-    return jsonify({"status": "ok", "action": "fan_on", "hardware": hardware_available})
+def hardware_watchdog():
+    global is_inferring
+    while True:
+        # 마지막으로 추론 프레임을 받은 지 2초가 지나면 멈춤
+        if is_inferring and (time.time() - last_tick_time > 2.0):
+            is_inferring = False
+            if hardware_available and fan:
+                fan.off()
+            print("\n[PI 하드웨어] 💤 추론 요청 없음. (CPU IDLE -> 쿨링팬 정지)")
+        time.sleep(0.5)
 
-@app.route('/fan/off', methods=['GET'])
-def fan_off():
-    if hardware_available and fan:
-        fan.off()
-    print("\n[PI 하드웨어] 🛑 엣지 노트북으로부터 명령 수신: 팬 작동 정지. (착상/일반 가동)")
-    return jsonify({"status": "ok", "action": "fan_off", "hardware": hardware_available})
+threading.Thread(target=hardware_watchdog, daemon=True).start()
+
+@app.route('/infer/tick', methods=['GET'])
+def infer_tick():
+    global last_tick_time, is_inferring
+    last_tick_time = time.time()
+    
+    if not is_inferring:
+        is_inferring = True
+        if hardware_available and fan:
+            fan.on()
+        print("\n[PI 하드웨어] 🚀 실시간 영상 수신 중! (추론 연산 부하 -> 쿨링팬 100% 가동!)")
+        
+    # 만약 LED가 있다면 한 번 깜빡이게 함 (비동기)
+    if hardware_available and infer_led:
+        def blink():
+            infer_led.on()
+            time.sleep(0.1)
+            infer_led.off()
+        threading.Thread(target=blink).start()
+        
+    return jsonify({"status": "ok", "action": "infer_tick", "hardware": hardware_available})
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -33,11 +61,10 @@ def health():
 
 if __name__ == '__main__':
     print("="*60)
-    print(" 🍓 물리적 라즈베리파이 하드웨어 동기화 서버 시작 🍓 ")
+    print(" 🍓 물리적 라즈베리파이 하드웨어(추론 모방) 서버 시작 🍓 ")
     print("="*60)
     print(" - 포트: 5001")
-    print(" - 제어 핀: BCM GPIO 18")
-    print(" - 이 스크립트를 실제 라즈베리파이 안에서 실행해두세요.")
+    print(" - 쿨링팬 제어 핀: BCM GPIO 18")
+    print(" - 상태 표시 LED (옵션): BCM GPIO 23")
     print("="*60)
-    # 모든 IP에서 접속 가능하도록 0.0.0.0 개방
     app.run(host='0.0.0.0', port=5001, debug=False)

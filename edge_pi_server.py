@@ -42,40 +42,39 @@ def infer():
     score = data.get('score', 0)
     is_defrosting = data.get('isDefrosting', False)
     
-    status = "Frost Growing"
-    conf = min(99.9, 50 + score * 0.49)
+    # 4단계 서리 추론 로직
+    stage_num = 1
+    stage_name = "Normal"
+    if score >= 75:
+        stage_num = 4
+        stage_name = "Critical"
+    elif score >= 50:
+        stage_num = 3
+        stage_name = "Severe"
+    elif score >= 25:
+        stage_num = 2
+        stage_name = "Mild"
+        
     if is_defrosting:
-        status = "Defrost Cycle"
-        conf = 99.9
-    elif score > 75:
-        status = "CRITICAL FROST"
-
+        status = "DEFROSTING"
+    else:
+        status = f"Stage {stage_num} ({stage_name})"
+        
     latest_score = score
     latest_status = status
     
-    # 3. 하드웨어 제어 로직: 상태 변경 시 실제 라즈베리파이로 신호 전송
-    global _last_sent_action
-    # 제상(Defrost) 시에 팬을 돌리거나(또는 착상 시에 돌리거나) 상황에 맞게 매핑
-    if is_defrosting:
-        action = "/fan/on"
-    else:
-        action = "/fan/off"
-        
-    if action != _last_sent_action:
-        _last_sent_action = action
-        # 비동기로 신호 전송 (추론 지연 방지)
-        def send_hardware_signal():
-            try:
-                requests.get(PHYSICAL_PI_URL + action, timeout=1)
-                print(f"   => [하드웨어 동기화] 물리적 라즈베리파이(탁자 위)로 명령 전송 성공: {action}")
-            except Exception as e:
-                # 연결 실패 시 서버가 죽지 않도록 무시
-                pass
-        threading.Thread(target=send_hardware_signal, daemon=True).start()
+    # 3. 하드웨어 제어 로직: 프레임이 들어올 때마다 라즈베리파이에 '추론 중' 틱(Tick) 신호 전송
+    def send_infer_tick():
+        try:
+            # 타임아웃을 아주 짧게 주어 통신 지연 방지
+            requests.get(PHYSICAL_PI_URL + "/infer/tick", timeout=0.5)
+        except Exception as e:
+            pass
+    threading.Thread(target=send_infer_tick, daemon=True).start()
 
     print(f"\n[pi@deepfrost-edge ~]$ Incoming Frame Received (640x360).")
     print(f"[pi@deepfrost-edge ~]$ Running Edge CNN Inference Model...")
-    print(f"   => [RESULT] Class: {status} / Frost Probability: {conf:.1f}%")
+    print(f"   => [RESULT] Status: {status} / Frost Level: {score:.1f}%")
 
     return jsonify({'status': 'ok'})
 
@@ -89,17 +88,13 @@ def display_loop():
         if latest_frame is not None:
             display_img = latest_frame.copy()
             
-            # 영상 위에 그럴싸한 AI Bounding Box 및 텍스트 오버레이
-            h, w = display_img.shape[:2]
+            # AI 테두리 박스 제거 후 4단계 상태와 퍼센트만 표시
+            color = (0, 255, 0) # 초록 (1~2단계)
+            if latest_score >= 50: color = (0, 165, 255) # 주황 (3단계)
+            if latest_score >= 75: color = (0, 0, 255) # 빨강 (4단계)
             
-            # AI 테두리 박스
-            color = (0, 255, 0) # 초록
-            if latest_score > 50: color = (0, 165, 255) # 주황
-            if latest_score > 75: color = (0, 0, 255) # 빨강
-            
-            cv2.rectangle(display_img, (20, 20), (w-20, h-20), color, 2)
-            cv2.putText(display_img, f"EDGE CNN: {latest_status}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-            cv2.putText(display_img, f"FROST PROB: {min(99.9, 50 + latest_score*0.49):.1f}%", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+            cv2.putText(display_img, f"AI INFERENCE: {latest_status}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+            cv2.putText(display_img, f"FROST LEVEL: {latest_score:.1f}%", (30, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             
             cv2.imshow("Raspberry Pi - DeepFrost Edge Vision", display_img)
         
