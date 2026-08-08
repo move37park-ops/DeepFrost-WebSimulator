@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>히트펌프 시뮬레이터</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Pretendard:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* DARK MODE (Default, Cinematic) */
+            --bg-deep: #07090e;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --bg-card-border: rgba(255, 255, 255, 0.08);
+            --bg-border-light: rgba(255, 255, 255, 0.05);
+            --bg-border-medium: rgba(255, 255, 255, 0.1);
+            --bg-pill: rgba(0, 240, 255, 0.1);
+            --bg-header: rgba(11, 15, 25, 0.8);
+            --bg-center: rgba(10, 15, 30, 0.6);
+            --bg-hud: rgba(7, 11, 20, 0.85);
+            --comp-fill: rgba(15, 23, 42, 0.8);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            
+            --accent-cyan: #00f0ff;
+            --accent-blue: #3b82f6;
+            --accent-ice: #93c5fd;
+            --accent-gold: #fbbf24;
+            --accent-red: #f87171;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-hud: #fff;
+            
+            --font-display: 'Orbitron', sans-serif;
+            --font-body: 'Pretendard', sans-serif;
+            
+            --bg-gradient: radial-gradient(circle at 50% 30%, rgba(0, 240, 255, 0.05) 0%, transparent 60%),
+                           radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
+        }
+
+        :root.light-mode {
+            /* LIGHT MODE (Clean, Cinematic Silver) */
+            --bg-deep: #eef2f6;
+            --bg-card: rgba(255, 255, 255, 0.8);
+            --bg-card-border: rgba(0, 0, 0, 0.08);
+            --bg-border-light: rgba(0, 0, 0, 0.05);
+            --bg-border-medium: rgba(0, 0, 0, 0.1);
+            --bg-pill: rgba(2, 132, 199, 0.1);
+            --bg-header: rgba(238, 242, 246, 0.8);
+            --bg-center: rgba(255, 255, 255, 0.6);
+            --bg-hud: rgba(255, 255, 255, 0.85);
+            --comp-fill: rgba(255, 255, 255, 0.9);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            
+            --accent-cyan: #0284c7;
+            --accent-blue: #2563eb;
+            --accent-ice: #38bdf8;
+            --accent-gold: #d97706;
+            --accent-red: #dc2626;
+            
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-hud: #0f172a;
+            
+            --bg-gradient: radial-gradient(circle at 50% 30%, rgba(2, 132, 199, 0.05) 0%, transparent 60%),
+                           radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.04) 0%, transparent 50%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, fill 0.4s ease, stroke 0.4s ease;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            background-image: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            background: var(--bg-header);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--bg-card-border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            font-weight: 900;
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            color: #fff;
+        }
+        
+        :root.light-mode .brand-icon {
+            color: #fff;
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.3);
+        }
+
+        .brand-title h1 {
+            font-family: var(--font-display);
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, var(--text-main), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            color: var(--text-main);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .theme-toggle:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .status-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-pill);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Main Container */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            gap: 20px;
+            padding: 20px 32px;
+            flex: 1;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: var(--glass-shadow);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--bg-border-light);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Left Controls */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .label-title {
+            color: var(--text-muted);
+        }
+
+        .label-value {
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-border-medium);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-cyan);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn-preset {
+            background: transparent;
+            border: 1px solid var(--bg-border-light);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-preset:hover, .btn-preset.active {
+            background: var(--bg-pill);
+            border-color: var(--accent-cyan);
+            color: var(--text-main);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+        :root.light-mode .btn-play { box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); }
+
+        .btn-play:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--bg-border-medium);
+        }
+
+        .btn-reset:hover {
+            background: var(--bg-border-light);
+        }
+
+        /* Center Hybrid Flow Display */
+        .center-display {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-center);
+            border-radius: 16px;
+            border: 1px solid var(--bg-border-medium);
+            box-shadow: inset 0 0 40px var(--bg-border-light);
+            overflow: hidden;
+        }
+
+        .cycle-video {
+            width: 100%;
+            height: 100%;
+            max-height: 480px;
+            object-fit: cover;
+            border-radius: 16px;
+            opacity: 0.88;
+        }
+
+
+        /* SVG Components Styling */
+        .comp-box {
+            fill: var(--comp-fill);
+            stroke: var(--bg-card-border);
+            stroke-width: 2;
+            rx: 12;
+        }
+
+        .comp-title {
+            fill: var(--text-main);
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .comp-sub {
+            fill: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .pipe-path {
+            fill: none;
+            stroke: var(--bg-border-medium);
+            stroke-width: 6;
+            stroke-linecap: round;
+        }
+
+        .pipe-flow {
+            fill: none;
+            stroke: var(--accent-cyan);
+            stroke-width: 6;
+            stroke-dasharray: 12 12;
+            stroke-linecap: round;
+            animation: flowAnim 1s linear infinite;
+        }
+
+        @keyframes flowAnim {
+            to { stroke-dashoffset: -24; }
+        }
+
+        /* Frost Overlay on Evaporator */
+        .frost-layer {
+            fill: rgba(255, 255, 255, 0.85);
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+            opacity: 0;
+        }
+
+        /* Right Telemetry Gauges */
+        .metric-card {
+            background: transparent;
+            border: 1px solid var(--bg-border-light);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .metric-info .m-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .metric-info .m-val {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+
+        .metric-unit {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .gauge-ring {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: var(--bg-border-light);
+            stroke-width: 4;
+        }
+
+        .gauge-bar {
+            fill: none;
+            stroke: var(--accent-cyan);
+            stroke-width: 4;
+            stroke-dasharray: 126;
+            stroke-dashoffset: 126;
+        }
+
+        /* Bottom Graph */
+        .bottom-panel {
+            grid-column: span 3;
+            height: 160px;
+            padding: 14px 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 100px;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            .bottom-panel {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <div class="brand-title">
+                <h1>히트펌프 시뮬레이터</h1>
+            </div>
+        </div>
+
+        <div class="header-stats">
+            
+            <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+            </button>
+            <div class="status-pill">
+    
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">SIMULATING</span>
+            </div>
+            <div style="font-family: var(--font-display); font-size: 0.9rem; color: var(--text-muted);">
+                TIME: <span id="timeDisplay" style="color: var(--text-main); font-weight: 700;">00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard-container">
+        
+        <!-- Left: Control Sliders -->
+        <div class="glass-panel">
+            <div class="panel-header">
+                <span class="panel-title">⚙️ ENVIRONMENT CONTROLS</span>
+            </div>
+
+            <!-- Slider 1: Outdoor Temp -->
+            <div class="control-group">
+                <div class="label-row">
+                    <span class="label-title">외기 온도 (Outdoor Temp)</span>
+                    <span class="label-value" id="valTemp">-3.0 °C</span>
+                </div>
+                <input type="range" id="sliderTemp" min="-20" max="10" step="0.5" value="-3.0">
+            </div>
+
+            <!-- Slider 2: Humidity -->
+            <div class="control-group">
+                <div class="label-row">
+                    <span class="label-title">상대 습도 (Humidity)</span>
+                    <span class="label-value" id="valHumidity">80 %</span>
+                </div>
+                <input type="range" id="sliderHumidity" min="50" max="100" step="1" value="80">
+            </div>
+
+            <!-- Slider 3: Duration/Time Scale -->
+            <div class="control-group">
+                <div class="label-row">
+                    <span class="label-title">진행 배속 (Speed Ratio)</span>
+                    <span class="label-value" id="valSpeed">5x Speed</span>
+                </div>
+                <input type="range" id="sliderSpeed" min="1" max="20" step="1" value="5">
+            </div>
+
+            <!-- Presets -->
+            <div class="control-group">
+                <span class="label-title" style="font-size: 0.8rem;">기후 프리셋 (Weather Presets)</span>
+                <div class="preset-buttons">
+                    <button class="btn-preset active" onclick="setPreset(-3, 80, this)">겨울 표준 (-3℃, 80%)</button>
+                    <button class="btn-preset" onclick="setPreset(2, 95, this)">고습 서리 (2℃, 95%)</button>
+                    <button class="btn-preset" onclick="setPreset(-10, 60, this)">한대 건조 (-10℃, 60%)</button>
+                    <button class="btn-preset" onclick="setPreset(-5, 90, this)">급속 착상 (-5℃, 90%)</button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn-action btn-play" id="btnToggle" onclick="toggleSim()">⏸ PAUSE</button>
+                <button class="btn-action btn-defrost" onclick="triggerDefrost()" style="background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-gold); color: var(--accent-gold);">🔥 DEFROST</button>
+                <button class="btn-action btn-reset" onclick="resetSim()">🔄 RESET</button>
+            </div>
+        </div>
+
+        <!-- Center: Hybrid Heat Pump Cycle Video Display -->
+        <div class="center-display">
+            <video id="cycleVideo" src="videoplayback.m4v" muted playsinline preload="auto" class="cycle-video"></video>
+
+
+        </div>
+
+        <!-- Right: Telemetry Gauges -->
+        <div class="glass-panel">
+            <div class="panel-header">
+                <span class="panel-title">📊 TELEMETRY GAUGES</span>
+            </div>
+
+            <!-- Metric 1: Frost Score -->
+            <div class="metric-card">
+                <div class="metric-info">
+                    <div class="m-label">서리 위험 점수 (Frost Score)</div>
+                    <div class="m-val"><span id="mScore">4.4</span><span class="metric-unit">/ 100</span></div>
+                </div>
+                <div class="gauge-ring">
+                    <svg class="gauge-svg" viewBox="0 0 44 44">
+                        <circle class="gauge-bg" cx="22" cy="22" r="18"/>
+                        <circle class="gauge-bar" id="gaugeScore" cx="22" cy="22" r="18"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Metric 2: Superheat -->
+            <div class="metric-card">
+                <div class="metric-info">
+                    <div class="m-label">과열도 (Superheat SH)</div>
+                    <div class="m-val"><span id="mSuperheat">4.12</span><span class="metric-unit">K</span></div>
+                </div>
+                <div class="gauge-ring">
+                    <svg class="gauge-svg" viewBox="0 0 44 44">
+                        <circle class="gauge-bg" cx="22" cy="22" r="18"/>
+                        <circle class="gauge-bar" id="gaugeSH" cx="22" cy="22" r="18" stroke="#00f0ff"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Metric 3: Evaporator Temp -->
+            <div class="metric-card">
+                <div class="metric-info">
+                    <div class="m-label">증발기 배관 온도 (Evap Temp)</div>
+                    <div class="m-val"><span id="mEvapTemp">-22.2</span><span class="metric-unit">°C</span></div>
+                </div>
+            </div>
+
+            <!-- Metric 4: Compressor Power -->
+            <div class="metric-card">
+                <div class="metric-info">
+                    <div class="m-label">압축기 소비 전력 (Power)</div>
+                    <div class="m-val"><span id="mPower">8.95</span><span class="metric-unit">kW</span></div>
+                </div>
+            </div>
+
+            <!-- Metric 5: Capacity Ratio -->
+            <div class="metric-card">
+                <div class="metric-info">
+                    <div class="m-label">열교환 능력 유지 비율</div>
+                    <div class="m-val"><span id="mCap">99.3</span><span class="metric-unit">%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom: Real-Time Trend Sparkline Chart -->
+        <div class="glass-panel bottom-panel">
+            <div class="panel-header" style="padding-bottom: 6px;">
+                <span class="panel-title">📈 REAL-TIME FROST TREND & TELEMETRY</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Blue: Frost Score | Gold: Superheat (K)</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Physics Simulator & UI Logic -->
+    <script>
+        
+        // Theme Toggle Logic
+        let isLight = false;
+        function toggleTheme() {
+            isLight = !isLight;
+            document.documentElement.classList.toggle('light-mode', isLight);
+            const icon = document.getElementById('themeIcon');
+            if (isLight) {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+            } else {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+            }
+            renderChart();
+        }
+
+        // --- Physical Constants & Math Engine ---
+    
+        // (frost_engine.py L36~69 기준 정밀 상수)
+        const SUPERHEAT_DESIGN = 5.0;   // K, 설계 과열도
+        const UA_CLEAN = 0.3696;        // kW/K, 청정 UA
+        const T_EVAP_IN_C = -25.0;      // °C, 증발기 입구 포화온도
+        const DH_CLEAN = 194.8;         // kJ/kg, 청정 증발기 엔탈피 상승
+        const F0_SEED = 0.01;
+        const F_CRIT = 0.85;
+        const T_CRIT_REF_S = 90 * 60;   // 5400s (0°C/80% 기준 임계 ~90분)
+
+        let simState = {
+            running: true,
+            elapsedSeconds: 0,
+            speedRatio: 5,
+            outdoorTemp: -3.0,
+            rh: 0.80,
+            frostFactor: F0_SEED,
+            isCriticalHold: false, // 임계 지점 10초 영상 동결 상태
+            isDefrosting: false,   // 제상 구동 상태
+            defrostTimer: 0,
+            defrostDuration: 60,   // 60초 제상 시간
+            defrostProgress: 0,
+            history: []
+        };
+
+        // Magnus saturation vapor pressure (Alduchov-Eskridge, frost_engine.py L135 일치)
+        function satVaporPressure(T) {
+            return 610.94 * Math.exp((17.625 * T) / (T + 243.04));
+        }
+
+        // Humidity ratio w (kg/kg)
+        function humidityRatio(T, rh) {
+            const p_sat = satVaporPressure(T);
+            const p_v = rh * p_sat;
+            const p_tot = 101325.0;
+            return 0.622 * p_v / Math.max(p_tot - p_v, 1.0);
+        }
+
+        // Frost Growth Rate r(T, rh) — frost_engine.py L140~149 캘리브레이션 재현
+        function growthRate(T, rh) {
+            const w = humidityRatio(T, rh);
+            const w_ref = humidityRatio(0.0, 0.80);
+            const logit = Math.log((F_CRIT / (1 - F_CRIT)) * ((1 - F0_SEED) / F0_SEED));
+            const r_ref = logit / T_CRIT_REF_S; // ≈ 0.000785/s
+            return r_ref * (w / w_ref);
+        }
+
+        // m_dot 동적 계산 — frost_engine.py L72~75 일치
+        function mDotFor(T_air_C) {
+            const Q_clean = UA_CLEAN * (T_air_C - T_EVAP_IN_C); // kW
+            return Q_clean / DH_CLEAN; // kg/s
+        }
+
+        // Frost Score Formula
+        function calcFrostScore(superheat, quality, wet) {
+            if (!wet) {
+                return Math.min(25.0, Math.max(0.0, 25.0 * (1.0 - Math.max(superheat, 0.0) / SUPERHEAT_DESIGN)));
+            }
+            const Q_FLOOR = 0.786;
+            const s = 25.0 + 75.0 * (1.0 - quality) / (1.0 - Q_FLOOR);
+            return Math.min(100.0, Math.max(25.0, s));
+        }
+
+        // Step Physics Engine
+        function stepPhysics(dt) {
+            // ── 1. Defrost Mode (제상 버튼 클릭 시: 10초->끝 정재생하며 능력 회복) ──
+            if (simState.isDefrosting) {
+                simState.defrostTimer += simState.speedRatio * dt;
+                simState.defrostProgress = Math.min(1.0, simState.defrostTimer / simState.defrostDuration);
+                
+                // 서리 감소 (0.85 -> 0.01)
+                const f = Math.max(F0_SEED, F_CRIT * (1.0 - simState.defrostProgress));
+                simState.frostFactor = f;
+                
+                // 열교환 능력 유지 비율 100% 회복
+                const UA_eff = Math.max(UA_CLEAN * (1.0 - 0.70 * f), 1e-6);
+                const Q_L = UA_eff * (simState.outdoorTemp - T_EVAP_IN_C);
+                const Q_clean = UA_CLEAN * (simState.outdoorTemp - T_EVAP_IN_C);
+                const capacityRatio = Q_L / Math.max(Q_clean, 1e-6);
+                
+                const superheat = 5.0 * simState.defrostProgress;
+                const quality = 1.0;
+                const wet = false;
+                const evapTemp = -26.33 + (15.0 * simState.defrostProgress); // 증발기 회복
+                const score = Math.max(0, 85.0 * (1.0 - simState.defrostProgress));
+                const power = 10.5;
+                
+                const stage = 4;
+                const stageName = "제상 구동 중 (DEFROSTING)";
+                const stageColor = "var(--accent-gold)";
+                
+                // 제상 완료: 열교환 능력 100% 회복 완료 시 리셋
+                if (simState.defrostProgress >= 1.0) {
+                    simState.isDefrosting = false;
+                    simState.isCriticalHold = false;
+                    simState.defrostTimer = 0;
+                    simState.defrostProgress = 0;
+                    simState.elapsedSeconds = 0; // 다음 사이클 리셋
+                    simState.frostFactor = F0_SEED;
+                }
+                
+                return {
+                    f, superheat, quality, wet, evapTemp,
+                    capacityRatio, stage, stageName, stageColor, score, power
+                };
+            }
+
+            // ── 2. 임계 지점 홀드 (Critical Hold: 10초 지점에서 영상 멈춤) ──
+            if (simState.isCriticalHold) {
+                const f = F_CRIT; // 서리 만착 상태 동결
+                const UA_eff = Math.max(UA_CLEAN * (1.0 - 0.70 * f), 1e-6);
+                const Q_L = UA_eff * (simState.outdoorTemp - T_EVAP_IN_C);
+                const Q_clean = UA_CLEAN * (simState.outdoorTemp - T_EVAP_IN_C);
+                const capacityRatio = Q_L / Math.max(Q_clean, 1e-6);
+                
+                return {
+                    f, superheat: 0.0, quality: 0.78, wet: true, evapTemp: -26.33,
+                    capacityRatio, stage: 3, stageName: "임계 (DEFROST NEEDED)",
+                    stageColor: "var(--accent-red)", score: 85.0, power: 9.3
+                };
+            }
+
+            // ── 3. Normal Frost Growth (열교환 능력 저하 중: 끝->10초 역재생) ──
+            const r = growthRate(simState.outdoorTemp, simState.rh);
+            simState.elapsedSeconds += simState.speedRatio * dt;
+            
+            const t = simState.elapsedSeconds;
+            const f = 1.0 / (1.0 + ((1.0 - F0_SEED) / F0_SEED) * Math.exp(-r * t));
+            simState.frostFactor = f;
+
+            const UA_eff = Math.max(UA_CLEAN * (1.0 - 0.70 * f), 1e-6);
+            const Q_L = UA_eff * (simState.outdoorTemp - T_EVAP_IN_C);
+            const Q_clean = UA_CLEAN * (simState.outdoorTemp - T_EVAP_IN_C);
+            const capacityRatio = Q_L / Math.max(Q_clean, 1e-6);
+
+            const H4   = 357.62;
+            const H_G  = 544.71;
+            const H_F  = 136.49;
+            const T_SAT_OUT = -26.33;
+
+            const m_dot = mDotFor(simState.outdoorTemp);
+            const h1 = H4 + Q_L / Math.max(m_dot, 1e-6);
+
+            let superheat = 0;
+            let quality = 1.0;
+            let wet = false;
+            let evapTemp = T_SAT_OUT;
+
+            if (h1 >= H_G) {
+                const dh = h1 - H_G;
+                const c1 = 0.6500;
+                const c2 = -0.000267;
+                superheat = Math.max(0, c1 * dh + c2 * dh * dh);
+                quality = 1.0;
+                wet = false;
+                evapTemp = T_SAT_OUT + superheat;
+            } else {
+                superheat = 0.0;
+                wet = true;
+                quality = Math.max(0.7, (h1 - H_F) / (H_G - H_F));
+                evapTemp = T_SAT_OUT;
+            }
+
+            let stage = 0;
+            let stageName = "정상 (NORMAL)";
+            let stageColor = "var(--accent-cyan)";
+
+            if (!wet && superheat >= 3.0) {
+                stage = 0; stageName = "정상 (NORMAL)"; stageColor = "var(--accent-cyan)";
+            } else if (!wet && superheat < 3.0) {
+                stage = 1; stageName = "초기 (EARLY)"; stageColor = "var(--accent-gold)";
+            } else if (wet && quality >= 0.90) {
+                stage = 2; stageName = "중기 (MEDIUM)"; stageColor = "#f97316";
+            } else {
+                stage = 3; stageName = "임계 (CRITICAL)"; stageColor = "var(--accent-red)";
+            }
+
+            const score = calcFrostScore(superheat, quality, wet);
+            const power = 8.9 + (f * 0.4);
+
+            // 임계 도달 시 홀드 (10초 지점에서 영상 동결 & DEFROST NEEDED 대기)
+            if (score >= 75.0 || f >= F_CRIT) {
+                simState.isCriticalHold = true;
+            }
+
+            return {
+                f, superheat, quality, wet, evapTemp,
+                capacityRatio, stage, stageName, stageColor, score, power
+            };
+        }
+
+        // UI Update Engine
+        function updateUI(p) {
+            // Time display
+            const mins = Math.floor(simState.elapsedSeconds / 60).toString().padStart(2, '0');
+            const secs = Math.floor(simState.elapsedSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timeDisplay').innerText = `${mins}:${secs}`;
+
+            // Gauges & Values
+            document.getElementById('mScore').innerText = p.score.toFixed(1);
+            document.getElementById('mSuperheat').innerText = p.superheat.toFixed(2);
+            document.getElementById('mEvapTemp').innerText = p.evapTemp.toFixed(1);
+            document.getElementById('mPower').innerText = p.power.toFixed(2);
+            document.getElementById('mCap').innerText = (p.capacityRatio * 100).toFixed(1);
+
+            const elPower = document.getElementById('txtCompPower');
+            if (elPower) elPower.innerText = `${p.power.toFixed(1)} kW | 15.8 A`;
+            const elEvap = document.getElementById('txtEvapTemp');
+            if (elEvap) elEvap.innerText = `${p.evapTemp.toFixed(1)} °C | SH: ${p.superheat.toFixed(1)}K`;
+
+
+            // Video Frame & Timeline Precision Sync
+            const vid = document.getElementById('cycleVideo');
+            if (vid && vid.readyState >= 1 && vid.duration) {
+                const T_full = 10.0; // 서리 만착 시점 (10초)
+                const T_end = Math.max(T_full + 1, vid.duration - 0.5); // 서리 완전 제거 시점 (~271초)
+                let targetTime = T_end;
+                
+                if (simState.isDefrosting) {
+                    // [2. 제상 구동 중]: 10초 -> 271초 정재생하며 서리가 녹아내림
+                    const normD = Math.min(1.0, Math.max(0.0, simState.defrostProgress));
+                    targetTime = T_full + normD * (T_end - T_full);
+                } else if (simState.isCriticalHold) {
+                    // [임계 지점 동결]: 10초 지점(서리 꽉 참)에서 영상 멈춤
+                    targetTime = T_full;
+                } else {
+                    // [1. 착상 진행 중]: 열교환 능력 저하되는 동안 271초 -> 10초 역재생 탐색하며 서리 차오름
+                    // Frost Score가 75에 도달하여 Critical Hold가 걸리는 시점의 물리적 f값은 항상 0.4837이므로 이를 기준으로 영상 전체를 매핑
+                    const f_halt = 0.4837;
+                    const normF = Math.min(1.0, Math.max(0.0, (simState.frostFactor - F0_SEED) / (f_halt - F0_SEED)));
+                    targetTime = T_end - normF * (T_end - T_full);
+                }
+
+                // 물리 시뮬레이션 상태 프레임으로 안전한 동기화 (충돌/깜빡임 방지)
+                // requestAnimationFrame의 높은 프레임레이트를 활용하여 부드러운 역재생(Scrubbing) 구현
+                if (Math.abs(vid.currentTime - targetTime) > 0.03 && !vid.seeking) {
+                    vid.currentTime = targetTime;
+                }
+            }
+
+            // Radial Gauge Fill
+            const gaugeScore = document.getElementById('gaugeScore');
+            const offset = 126 - (126 * (p.score / 100));
+            gaugeScore.style.strokeDashoffset = offset;
+            gaugeScore.style.stroke = p.stageColor;
+
+            // Store history for Chart (1초 단위로 기록하여 차트 간격 유지)
+            if (simState.history.length === 0 || Math.abs(simState.elapsedSeconds - simState.history[simState.history.length - 1].time) >= 1.0) {
+                simState.history.push({ time: simState.elapsedSeconds, score: p.score, sh: p.superheat * 10 });
+                if (simState.history.length > 60) simState.history.shift();
+            }
+            renderChart();
+        }
+
+        // Canvas Trend Chart Render
+        function renderChart() {
+            const canvas = document.getElementById('trendChart');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = canvas.offsetWidth;
+            const h = canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, w, h);
+
+            if (simState.history.length < 2) return;
+
+            // Draw Grid Lines
+            ctx.strokeStyle = document.documentElement.classList.contains("light-mode") ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
+            ctx.lineWidth = 1;
+            for (let y = 0; y < h; y += 25) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            const style = getComputedStyle(document.documentElement);
+            const colorCyan = style.getPropertyValue('--accent-cyan').trim() || "#00f0ff";
+            const colorGold = style.getPropertyValue('--accent-gold').trim() || "#fbbf24";
+
+            // Draw Score Line (Cyan)
+            ctx.strokeStyle = colorCyan;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            simState.history.forEach((pt, i) => {
+                const x = (i / (simState.history.length - 1)) * w;
+                const y = h - (pt.score / 100) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw Superheat Line (Gold)
+            ctx.strokeStyle = colorGold;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            simState.history.forEach((pt, i) => {
+                const x = (i / (simState.history.length - 1)) * w;
+                const y = h - (pt.sh / 50) * h; // Scale 5K max
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        // Sliders Listeners
+        document.getElementById('sliderTemp').addEventListener('input', (e) => {
+            simState.outdoorTemp = parseFloat(e.target.value);
+            document.getElementById('valTemp').innerText = `${simState.outdoorTemp.toFixed(1)} °C`;
+        });
+
+        document.getElementById('sliderHumidity').addEventListener('input', (e) => {
+            simState.rh = parseFloat(e.target.value) / 100.0;
+            document.getElementById('valHumidity').innerText = `${e.target.value} %`;
+        });
+
+        document.getElementById('sliderSpeed').addEventListener('input', (e) => {
+            simState.speedRatio = parseInt(e.target.value);
+            document.getElementById('valSpeed').innerText = `${simState.speedRatio}x Speed`;
+        });
+
+        function setPreset(temp, rh, btn) {
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            simState.outdoorTemp = temp;
+            simState.rh = rh / 100.0;
+
+            document.getElementById('sliderTemp').value = temp;
+            document.getElementById('valTemp').innerText = `${temp.toFixed(1)} °C`;
+
+            document.getElementById('sliderHumidity').value = rh;
+            document.getElementById('valHumidity').innerText = `${rh} %`;
+        }
+
+        function toggleSim() {
+            simState.running = !simState.running;
+            const btn = document.getElementById('btnToggle');
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+
+            if (simState.running) {
+                btn.innerText = "⏸ PAUSE";
+                dot.style.background = "var(--accent-cyan)";
+                txt.innerText = "SIMULATING";
+            } else {
+                btn.innerText = "▶ RESUME";
+                dot.style.background = "var(--accent-gold)";
+                txt.innerText = "PAUSED";
+            }
+        }
+
+        function triggerDefrost() {
+            simState.isCriticalHold = false;
+            simState.isDefrosting = true;
+            simState.defrostTimer = 0;
+            simState.defrostProgress = 0;
+        }
+
+        function resetSim() {
+            simState.elapsedSeconds = 0;
+            simState.frostFactor = F0_SEED;
+            simState.isCriticalHold = false;
+            simState.isDefrosting = false;
+            simState.defrostTimer = 0;
+            simState.defrostProgress = 0;
+            simState.history = [];
+            const p = stepPhysics(0);
+            updateUI(p);
+        }
+
+        // Main Loop (High-Refresh Rate for smooth scrubbing)
+        let lastTick = performance.now();
+        function mainLoop(now) {
+            requestAnimationFrame(mainLoop);
+            
+            const rawDt = (now - lastTick) / 1000.0;
+            lastTick = now;
+            const dt = Math.min(rawDt, 0.1); // Limit max dt to 100ms to prevent jumps
+            
+            if (simState.running) {
+                const p = stepPhysics(dt);
+                updateUI(p);
+            }
+        }
+
+        // Initial Run
+        const initialPhysics = stepPhysics(0);
+        updateUI(initialPhysics);
+        requestAnimationFrame(mainLoop);
+
+    </script>
+</body>
+</html>
