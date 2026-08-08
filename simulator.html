@@ -657,16 +657,7 @@
             </div>
         </div>
 
-        <!-- Bottom: Real-Time Trend Sparkline Chart -->
-        <div class="glass-panel bottom-panel">
-            <div class="panel-header" style="padding-bottom: 6px;">
-                <span class="panel-title">📈 REAL-TIME FROST TREND & TELEMETRY</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">Blue: Frost Score | Gold: Superheat (K)</span>
-            </div>
-            <div class="chart-container">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
+    </div>
 
     </div>
 
@@ -684,7 +675,7 @@
             } else {
                 icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
             }
-            renderChart();
+            
         }
 
         // --- Physical Constants & Math Engine ---
@@ -934,63 +925,13 @@
             gaugeScore.style.strokeDashoffset = offset;
             gaugeScore.style.stroke = p.stageColor;
 
-            // Store history for Chart (1초 단위로 기록하여 차트 간격 유지)
-            if (simState.history.length === 0 || Math.abs(simState.elapsedSeconds - simState.history[simState.history.length - 1].time) >= 1.0) {
-                simState.history.push({ time: simState.elapsedSeconds, score: p.score, sh: p.superheat * 10 });
+ });
                 if (simState.history.length > 60) simState.history.shift();
             }
-            renderChart();
+            
         }
 
-        // Canvas Trend Chart Render
-        function renderChart() {
-            const canvas = document.getElementById('trendChart');
-            const ctx = canvas.getContext('2d');
-            const w = canvas.width = canvas.offsetWidth;
-            const h = canvas.height = canvas.offsetHeight;
 
-            ctx.clearRect(0, 0, w, h);
-
-            if (simState.history.length < 2) return;
-
-            // Draw Grid Lines
-            ctx.strokeStyle = document.documentElement.classList.contains("light-mode") ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
-            ctx.lineWidth = 1;
-            for (let y = 0; y < h; y += 25) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(w, y);
-                ctx.stroke();
-            }
-
-            const style = getComputedStyle(document.documentElement);
-            const colorCyan = style.getPropertyValue('--accent-cyan').trim() || "#00f0ff";
-            const colorGold = style.getPropertyValue('--accent-gold').trim() || "#fbbf24";
-
-            // Draw Score Line (Cyan)
-            ctx.strokeStyle = colorCyan;
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            simState.history.forEach((pt, i) => {
-                const x = (i / (simState.history.length - 1)) * w;
-                const y = h - (pt.score / 100) * h;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-
-            // Draw Superheat Line (Gold)
-            ctx.strokeStyle = colorGold;
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            simState.history.forEach((pt, i) => {
-                const x = (i / (simState.history.length - 1)) * w;
-                const y = h - (pt.sh / 50) * h; // Scale 5K max
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-        }
 
         // Sliders Listeners
         document.getElementById('sliderTemp').addEventListener('input', (e) => {
