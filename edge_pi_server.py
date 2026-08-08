@@ -5,13 +5,24 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import threading
+import requests
 
 app = Flask(__name__)
 CORS(app)  # 웹 시뮬레이터(HTML)에서 fetch 요청을 허용하기 위해 CORS 활성화
 
+# ==========================================
+# 실제 라즈베리파이 하드웨어(팬) 연동 설정
+# ==========================================
+# 실제 물리적 라즈베리파이 기기의 IP 주소를 입력하세요. (포트 5001)
+# (예: http://192.168.0.15:5001)
+PHYSICAL_PI_URL = "http://192.168.0.10:5001"
+# ==========================================
+
+
 latest_frame = None
 latest_score = 0
 latest_status = "WAITING"
+_last_sent_action = None
 
 @app.route('/api/infer', methods=['POST'])
 def infer():
@@ -42,6 +53,26 @@ def infer():
     latest_score = score
     latest_status = status
     
+    # 3. 하드웨어 제어 로직: 상태 변경 시 실제 라즈베리파이로 신호 전송
+    global _last_sent_action
+    # 제상(Defrost) 시에 팬을 돌리거나(또는 착상 시에 돌리거나) 상황에 맞게 매핑
+    if is_defrosting:
+        action = "/fan/on"
+    else:
+        action = "/fan/off"
+        
+    if action != _last_sent_action:
+        _last_sent_action = action
+        # 비동기로 신호 전송 (추론 지연 방지)
+        def send_hardware_signal():
+            try:
+                requests.get(PHYSICAL_PI_URL + action, timeout=1)
+                print(f"   => [하드웨어 동기화] 물리적 라즈베리파이(탁자 위)로 명령 전송 성공: {action}")
+            except Exception as e:
+                # 연결 실패 시 서버가 죽지 않도록 무시
+                pass
+        threading.Thread(target=send_hardware_signal, daemon=True).start()
+
     print(f"\n[pi@deepfrost-edge ~]$ Incoming Frame Received (640x360).")
     print(f"[pi@deepfrost-edge ~]$ Running Edge CNN Inference Model...")
     print(f"   => [RESULT] Class: {status} / Frost Probability: {conf:.1f}%")
