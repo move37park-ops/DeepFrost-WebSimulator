@@ -604,12 +604,7 @@
                 <span class="panel-title">📊 TELEMETRY GAUGES</span>
             </div>
 
-            <!-- Metric 1: Frost Score -->
-            <div class="metric-card">
-                <div class="metric-info">
-                    <div class="m-label">서리 위험 점수 (Frost Score)</div>
-                    <div class="m-val"><span id="mScore">4.4</span><span class="metric-unit">/ 100</span></div>
-                </div>
+
                 <div class="gauge-ring">
                     <svg class="gauge-svg" viewBox="0 0 44 44">
                         <circle class="gauge-bg" cx="22" cy="22" r="18"/>
@@ -878,7 +873,7 @@
             document.getElementById('timeDisplay').innerText = `${mins}:${secs}`;
 
             // Gauges & Values
-            document.getElementById('mScore').innerText = p.score.toFixed(1);
+            if(document.getElementById('mScore')) document.getElementById('mScore').innerText = p.score.toFixed(1);
             document.getElementById('mSuperheat').innerText = p.superheat.toFixed(2);
             document.getElementById('mEvapTemp').innerText = p.evapTemp.toFixed(1);
             document.getElementById('mPower').innerText = p.power.toFixed(2);
@@ -921,9 +916,11 @@
 
             // Radial Gauge Fill
             const gaugeScore = document.getElementById('gaugeScore');
-            const offset = 126 - (126 * (p.score / 100));
-            gaugeScore.style.strokeDashoffset = offset;
-            gaugeScore.style.stroke = p.stageColor;
+            if (gaugeScore) {
+                const offset = 126 - (126 * (p.score / 100));
+                gaugeScore.style.strokeDashoffset = offset;
+                gaugeScore.style.stroke = p.stageColor;
+            }
         }
 
 
