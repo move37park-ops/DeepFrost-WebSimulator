@@ -525,9 +525,9 @@
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                 </svg>
             </button>
-            <div class="status-pill" style="border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1);">
-                <div class="status-dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></div>
-                <span>PI CONNECTED</span>
+            <div class="status-pill" style="border-color: #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.1);">
+                <div class="status-dot" style="background: #fbbf24; box-shadow: 0 0 8px #fbbf24;"></div>
+                <span>SEARCHING PI...</span>
             </div>
             <div class="status-pill">
                 <div class="status-dot" id="statusDot"></div>
@@ -862,7 +862,9 @@
         }
 
         // UI Update Engine
+        let p_global_score = 0;
         function updateUI(p) {
+            p_global_score = p.score;
             // Time display
             const mins = Math.floor(simState.elapsedSeconds / 60).toString().padStart(2, '0');
             const secs = Math.floor(simState.elapsedSeconds % 60).toString().padStart(2, '0');
@@ -1006,6 +1008,67 @@
         const initialPhysics = stepPhysics(0);
         updateUI(initialPhysics);
         requestAnimationFrame(mainLoop);
+
+
+        // ==========================================
+        // EDGE AI STREAMING (Web -> Python Flask)
+        // ==========================================
+        // 다른 노트북(라즈베리파이 역할)의 IP 주소로 아래 URL을 변경하세요. (예: http://192.168.0.5:5000/api/infer)
+        const EDGE_PI_URL = "http://127.0.0.1:5000/api/infer";
+        
+        const streamCanvas = document.createElement('canvas');
+        const streamCtx = streamCanvas.getContext('2d');
+        let isConnected = false;
+
+        setInterval(() => {
+            const vid = document.getElementById('cycleVideo');
+            if (!simState.running || !vid || vid.readyState < 2) return;
+            
+            // 캡처 해상도 최적화 (640x360)
+            streamCanvas.width = 640;
+            streamCanvas.height = 360;
+            streamCtx.drawImage(vid, 0, 0, streamCanvas.width, streamCanvas.height);
+            
+            const frameData = streamCanvas.toDataURL('image/jpeg', 0.6);
+            
+            fetch(EDGE_PI_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    image: frameData, 
+                    score: p_global_score || 0,
+                    isDefrosting: simState.isDefrosting
+                })
+            })
+            .then(response => {
+                if(response.ok) {
+                    if (!isConnected) {
+                        isConnected = true;
+                        const pill = document.querySelectorAll('.status-pill')[0];
+                        pill.querySelector('span').innerText = 'PI CONNECTED';
+                        pill.style.borderColor = '#10b981';
+                        pill.style.color = '#10b981';
+                        pill.style.background = 'rgba(16, 185, 129, 0.1)';
+                        const dot = pill.querySelector('.status-dot');
+                        dot.style.background = '#10b981';
+                        dot.style.boxShadow = '0 0 8px #10b981';
+                    }
+                }
+            })
+            .catch(err => {
+                if (isConnected || document.querySelectorAll('.status-pill')[0].querySelector('span').innerText === 'PI CONNECTED') {
+                    isConnected = false;
+                    const pill = document.querySelectorAll('.status-pill')[0];
+                    pill.querySelector('span').innerText = 'PI DISCONNECTED';
+                    pill.style.borderColor = '#f87171';
+                    pill.style.color = '#f87171';
+                    pill.style.background = 'rgba(248, 113, 113, 0.1)';
+                    const dot = pill.querySelector('.status-dot');
+                    dot.style.background = '#f87171';
+                    dot.style.boxShadow = '0 0 8px #f87171';
+                }
+            });
+        }, 500); // 2 FPS 전송
 
     </script>
 </body>
